@@ -4059,7 +4059,7 @@
     #define SSDP_SUPPORT        1
     #define RF_SUPPORT          1
 
-    // ============================================================
+// ============================================================
 // Nexa 1 n
 // ============================================================
 #elif defined(Nexa_1_n)
@@ -4091,6 +4091,53 @@
     // #define BUTTON2_PIN 13
     // #define BUTTON2_MODE BUTTON_SWITCH
     // #define BUTTON2_RELAY 2
+
+    #define MQTT_SETTINGS_ENABLED 1
+    #define AWAY_MODE_SUPPORTED 0
+    #define LED_PROVIDER NEOPIXEL_LED
+    #define LED_CONFIG NEOPIXEL_LED_CONFIG_GRB
+    #define WIFI_LED_PIN 14
+    // #define BUTTON_DBLCLICK_DELAY   500
+    // Wifi Leds on another board
+    // #define WIFI_LEDS_ON_ANOTHER_BOARDS 0
+    // #define LED_PROVIDER NEOPIXEL_LED
+    // #define LED_CONFIG NEOPIXEL_LED_CONFIG_GRB
+    // #define WIFI_LED_PIN 4
+
+    // Features
+    #define WIFI_SCAN_NETWORKS 1
+    #define WIFI_MAX_NETWORKS 1
+
+//========================================
+// nexa 2
+//===========================================
+#elif defined(Nexa_2)
+    #define MANUFACTURER COMPANY_NAME
+    #define DEVICE "SW_2_REL"
+    #define RELAY1_NUM 1
+    #define RELAY2_NUM 2
+    #define RELAY1_PIN 4
+    #define RELAY2_PIN 5
+    #define NEXA 1
+    #define RELAY_PROVIDER RELAY_PROVIDER_ESP
+    #define USE_DELAYED_REPORTING 1
+    #define USE_SWITCH_FOR_RESET 1
+    #define BUTTON1_DBLCLICK BUTTON_MODE_RESET
+    #define BUTTON1_LNGLNGCLICK BUTTON_MODE_FACTORY
+    #define BUTTON1_LNGCLICK BUTTON_MODE_NONE
+    #define BUTTON_DBL_CLICK_COUNT 5
+    #define BUTTON_TRIPLE_CLICK_COUNT 7
+    #define BUTTON_ACTION_MULTIPLE 1
+    #define BUTTON_DBLCLICK_DELAY 1200
+    #define BUTTON_DEBOUNCE_DELAY 60
+
+    #define BUTTON1_PIN 12
+    #define BUTTON1_MODE BUTTON_SWITCH
+    #define BUTTON1_RELAY 1
+
+    #define BUTTON2_PIN 13
+    #define BUTTON2_MODE BUTTON_SWITCH
+    #define BUTTON2_RELAY 2
 
     #define MQTT_SETTINGS_ENABLED 1
     #define AWAY_MODE_SUPPORTED 0
