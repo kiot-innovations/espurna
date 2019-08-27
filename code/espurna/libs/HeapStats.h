@@ -16,34 +16,28 @@ struct heap_stats_t {
 
 namespace EspClass_has_getHeapStats {
     struct _detector {
-        template<typename T, typename = decltype(
-                std::declval<T>().getHeapStats(0,0,0))>
+        template<typename T, typename = decltype(std::declval<T>().getHeapStats(0,0,0))>
           static std::true_type detect(int);
 
-        template<typename>
-          static std::false_type detect(...);
+        template<typename> static std::false_type detect(...);
     };
 
-    template <typename T>
-    struct detector : public _detector {
+    template <typename T> struct detector : public _detector {
         using result = decltype(
                 std::declval<detector>().template detect<T>(0));
     };
 
-    template <typename T>
-    struct typed_check : public detector<T>::result {
+    template <typename T> struct typed_check : public detector<T>::result {
     };
 
     typed_check<EspClass> check{};
 };
 
-template <typename T>
-void _getHeapStats(std::true_type&, T& instance, heap_stats_t& stats) {
+template <typename T> void _getHeapStats(std::true_type&, T& instance, heap_stats_t& stats) {
     instance.getHeapStats(&stats.available, &stats.usable, &stats.frag_pct);
 }
 
-template <typename T>
-void _getHeapStats(std::false_type&, T& instance, heap_stats_t& stats) {
+template <typename T> void _getHeapStats(std::false_type&, T& instance, heap_stats_t& stats) {
     stats.available = instance.getFreeHeap();
     stats.usable = 0;
     stats.frag_pct = 0;

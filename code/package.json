@@ -2,7 +2,7 @@
   "name": "esp8266-filesystem-builder",
   "description": "Gulp based build system for ESP8266 file system files",
   "main": "gulpfile.js",
-  "author": "Xose Pérez <xose.perez@gmail.com>",
+  "author": "kiot < tech@kiot.io>",
   "license": "GPL-3.0",
   "devDependencies": {
     "gulp": "^4.0.0",

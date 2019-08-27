@@ -290,24 +290,21 @@ void _mqttPlaceholders(String& text) {
 
 }
 
-template<typename T>
-void _mqttApplySetting(T& current, T& updated) {
+template<typename T> void _mqttApplySetting(T& current, T& updated) {
     if (current != updated) {
         current = std::move(updated);
         mqttDisconnect();
     }
 }
 
-template<typename T>
-void _mqttApplySetting(T& current, const T& updated) {
+template<typename T> void _mqttApplySetting(T& current, const T& updated) {
     if (current != updated) {
         current = updated;
         mqttDisconnect();
     }
 }
 
-template<typename T>
-void _mqttApplyTopic(T& current, const char* magnitude) {
+template<typename T> void _mqttApplyTopic(T& current, const char* magnitude) {
     String updated = mqttTopic(magnitude, false);
     if (current != updated) {
         mqttFlush();
