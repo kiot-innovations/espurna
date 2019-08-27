@@ -98,6 +98,7 @@
 #define RELAY_PROVIDER_LIGHT        2
 #define RELAY_PROVIDER_RFBRIDGE     3
 #define RELAY_PROVIDER_STM          4
+#define RELAY_PROVIDER_ESP          5
 
 #define RELAY_GROUP_SYNC_NORMAL      0
 #define RELAY_GROUP_SYNC_INVERSE     1
@@ -383,3 +384,7 @@
 #define SECURE_CLIENT_CHECK_FINGERPRINT   1 // legacy fingerprint validation
 #define SECURE_CLIENT_CHECK_CA            2 // set trust anchor from PROGMEM CA certificate
 
+
+#define NEOPIXEL_LED 2
+#define NEOPIXEL_LED_CONFIG_RGB 1
+#define NEOPIXEL_LED_CONFIG_GRB 2

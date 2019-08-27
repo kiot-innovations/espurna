@@ -94,7 +94,7 @@
 //#define LOMBEX_LUX_NOVA2_WHITE_COLOR
 //#define LUANI_HVIO
 //#define LYASI_LIGHT
-#define MAGICHOME_LED_CONTROLLER
+// #define MAGICHOME_LED_CONTROLLER
 //#define MAGICHOME_LED_CONTROLLER_20
 //#define MAGICHOME_ZJ_WFMN_A_11
 //#define MAGICHOME_ZJ_WFMN_B_11
@@ -137,6 +137,16 @@
 //#define YJZK_SWITCH_2CH
 //#define YJZK_SWITCH_3CH
 //#define ZHILDE_EU44_W
+
+//================================================
+//Nexa Device
+//================================================
+// #define Nexa_2
+// #define Nexa_3
+// #define Nexa_1_PLUS_1
+// #define Nexa_Dimmer
+#define Nexa_1_n
+
 
 //--------------------------------------------------------------------------------
 // Features (values below are non-default values)

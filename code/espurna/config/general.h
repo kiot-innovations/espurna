@@ -1723,3 +1723,7 @@
 #ifndef RFM69_IS_RFM69HW
 #define RFM69_IS_RFM69HW            0
 #endif
+
+#ifndef COMPANY_NAME
+#define COMPANY_NAME "KIOT_PVT_LTD"
+#endif
