@@ -143,9 +143,9 @@
 //================================================
 // #define Nexa_2
 // #define Nexa_3
-// #define Nexa_1_PLUS_1
+#define Nexa_1_PLUS_1
 // #define Nexa_Dimmer
-#define Nexa_1_n
+// #define Nexa_1_n
 
 
 //--------------------------------------------------------------------------------

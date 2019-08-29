@@ -14,6 +14,13 @@ Copyright (C) 2016-2019 by Xose Pérez <xose dot perez at gmail dot com>
 
 typedef struct {
 
+    unsigned char num;
+    bool reverse;
+    unsigned char status;
+    unsigned long _lastTriggred;
+    bool _report;
+    unsigned char last_reported_status;
+    bool take_dimmer_action;
     // Configuration variables
 
     unsigned char pin;          // GPIO pin for the relay
@@ -43,6 +50,20 @@ typedef struct {
 std::vector<relay_t> _relays;
 bool _relayRecursive = false;
 Ticker _relaySaveTicker;
+
+typedef struct
+{
+    unsigned char num;
+    unsigned char pin;
+    unsigned char value;
+    bool disabled;
+    int vdimval;
+} dimmer_t;
+dimmer_t _dimmer;
+
+#ifdef V_DIMMER
+int dbd = DIMMER_DEBOUNCE_DELAY;
+#endif
 
 // -----------------------------------------------------------------------------
 // RELAY PROVIDERS
@@ -476,6 +497,19 @@ void relayToggle(unsigned char id) {
 unsigned char relayCount() {
     return _relays.size();
 }
+// int jsonParser(const char* payload) {
+//     // Parse response
+//     StaticJsonBuffer<1500> jsonBuffer;
+//     JsonObject &root = jsonBuffer.parseObject(reinterpret_cast<const char *>(payload));
+
+//     if (!root.success()) {
+//         DEBUG_MSG_P(PSTR("[API] JSON parsing error\n"));
+//         return -1;
+//     }
+
+//         return root["value"];
+    
+// }
 
 unsigned char relayParsePayload(const char * payload) {
 
@@ -783,6 +817,20 @@ void relaySetupAPI() {
 
     char key[20];
 
+    // API entry for dimmer
+    #ifdef V_DIMMER
+        snprintf_P(key, sizeof(key), PSTR("%s"), MQTT_TOPIC_DIMMER);
+        apiRegister(
+            key,
+            [](char * buffer, size_t len) {
+				snprintf_P(buffer, len, PSTR("%d"), dimmerProviderStatus());
+            },
+            [](const char * payload) {
+                // uint8_t value = jsonParser(payload);
+                dimmerProviderStatus(String(payload).toInt());
+            }
+        );
+    #endif
     // API entry points (protected with apikey)
     for (unsigned int relayID=0; relayID<relayCount(); relayID++) {
 
@@ -793,7 +841,7 @@ void relaySetupAPI() {
             },
             [relayID](const char * payload) {
 
-                unsigned char value = relayParsePayload(payload);
+                uint8_t value = relayParsePayload(payload);
 
                 if (value == 0xFF) {
                     DEBUG_MSG_P(PSTR("[RELAY] Wrong payload (%s)\n"), payload);
@@ -1100,6 +1148,351 @@ void _relayLoop() {
     _relayProcess(true);
 }
 
+void dimmerEnable() {
+    int use_dimmer = getSetting("use_dimmer_1", "1").toInt();
+    if (use_dimmer == 0) {
+        _dimmer.disabled = true;
+        setDimmerToFull();
+    }
+}
+// Special Function - has to be called everytime, for devices which dont have proper atmega code, we need to continously send this.
+void setDimmerToFull() {
+    nice_delay(10000);
+    DEBUG_MSG_P(PSTR("DIM SET %d %d \n"), _dimmer.num, 99);
+}
+
+#ifdef V_DIMMER
+    int getStabilisedDimmerVal(int time){
+        unsigned long start = millis();
+        int dim_status = analogRead(V_DIMMER);
+        int i = 1;
+
+        while(millis() - start < time) {
+            int j = 0;
+                    int temp = 0;
+                for(j = 0; j < 25; j++){
+                    temp+=analogRead(V_DIMMER);
+                }
+                temp/=25;
+                dim_status = dim_status + (temp - dim_status) / i;
+                i++;
+        }
+        dim_status = max(0, dim_status);
+        dim_status = getDimValueInRange100(dim_status);
+        return dim_status;
+    }
+#endif
+int getDimValueInRange100(int val) {
+    #if DIMMING_LEVELS == 4
+        if (val > 800) {
+            return 99;
+        } else if (val > 600) {
+            return 75;
+        } else if (val > 400) {
+            return 50;
+        } else if (val > 200) {
+            return 25;
+        } else {
+            return 0;
+        }
+    #elif DIMMING_LEVELS == 5
+        if (val > 900) {
+            return 99;
+        } else if (val > 800) {
+            return 80;
+        } else if (val > 600) {
+            return 60;
+        } else if (val > 400) {
+            return 40;
+        } else if (val > 200) {
+            return 20;
+        } else {
+            return 0;
+        }
+    #endif
+}
+
+void relayRetrieve(bool invert) {
+
+    #if RELAY_PROVIDER == RELAY_PROVIDER_ESP
+        uint8_t status = EEPROMr.read(EEPROM_RELAY_STATUS);
+        DEBUG_MSG_P(PSTR("[DEBUG] Relay Status Retreieved : %d \n"), status);
+        // relayAllUpdate(status);
+    #endif
+
+        if (_dimmer.disabled == true) {
+            DEBUG_MSG_P(PSTR("CONFIG DIM DIS %d 1 \n"), _dimmer.num);
+            setDimmerToFull();
+        } else {
+            DEBUG_MSG_P(PSTR("CONFIG DIM DIS %d 0 \n"), _dimmer.num);
+        }
+}
+
+// // Function for updating Relay status in ram when sent from eeprom;
+// void relayAllUpdate(uint8_t status) {
+//     unsigned char bit = 1;
+//     bool changed = false;
+//     for (unsigned int i = 0; i < _relays.size(); i++) {
+//         // Do not report this- It's initializing
+//         if (relayUpdate(i + 1, ((status & bit) == bit)))
+//             changed = true;
+//         bit += bit;
+//     }
+
+//     if (changed) {
+//         relayAllMQTT();
+//         #if MQTT_REPORT_EVENT_TO_HOME
+//                 activeHomePong(true);
+//         #endif
+//     }
+// }
+
+bool relayUpdate(unsigned char id, unsigned char status) {
+    bool changed = false;
+    if (id > _relays.size() || id <= 0)
+        return false;
+    #if RELAY_PROVIDER == RELAY_PROVIDER_ESP
+    changed = relayProviderStatus(id, status);
+    #endif
+    _relays[id - 1].last_reported_status = status;
+    return changed;
+}
+
+bool relayProviderStatus(unsigned char id, bool status) {
+    bool changed = false;
+    if (id > _relays.size() || id <= 0)
+        return changed;
+
+    #if RELAY_PROVIDER == RELAY_PROVIDER_ESP
+        DEBUG_MSG_P(PSTR("R_%d_%d\n"), _relays[id - 1].num, status);
+        if (_relays[id - 1].status != status) {
+            changed = true;
+        }
+        if (_relays[id - 1].take_dimmer_action) {
+            if (status) {
+                // If turning on then simply restore the previous value
+                // Force on Dimmer because till now relay.status is set to false.
+                dimmerProviderStatus(_dimmer.value, true);
+            }
+            #if DIMMER_PROVIDER == DIMMER_PROVIDER_ESP
+                    else {
+                        // If turning off, then turn off all dimmer pins, but do not save it.
+                        dimmerOffWithoutSavingDimValue(id);
+                    }
+            #endif
+        } else {
+            digitalWrite(_relays[id - 1].pin, status);
+        }
+
+        _relays[id - 1].status = status;
+    #endif
+        return changed;
+}
+
+void dimmerProviderStatus(int value, bool force) {
+    DEBUG_MSG_P(PSTR("[Dimmer] taking Dimmer action %d "), value);
+    if (_dimmer.disabled == true) {
+        value = 99;
+    }
+    if (value < 0) {
+        value = 0;
+    }
+    if (value > 99) {
+        value = 99;
+    }
+    #if DIMMER_PROVIDER == DIMMER_PROVIDER_ESP
+        int _dim_value = map(value, 0, 99, 0, DIMMING_LEVELS);
+        _dimmer.value = value;
+        DEBUG_MSG_P(PSTR("[Dimmer] Setting Dimmer level to : %d \n"), _dim_value);
+        if (DIMMING_LEVELS == 5) {
+    #if CHEAT_DIMMER
+        DEBUG_MSG_P(PSTR("[Dimmer] Coming in cheat dimmer"));
+    #endif
+            switch (_dim_value) {
+    #if CHEAT_DIMMER
+                case 0:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 1:
+                    digitalWrite(DIMMER_PINS[0], HIGH);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                // SPEED IN BOTH LEVELS Level 2 and Level 3 would remain the same.
+                case 2:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 3:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 4:
+                    digitalWrite(DIMMER_PINS[0], HIGH);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 5:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], HIGH);
+                    break;
+                default:
+                    break;
+
+    #else
+                case 0:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    digitalWrite(DIMMER_PINS[3], LOW);
+                    break;
+                case 1:
+                    digitalWrite(DIMMER_PINS[0], HIGH);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    digitalWrite(DIMMER_PINS[3], LOW);
+                    break;
+                case 2:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    digitalWrite(DIMMER_PINS[3], LOW);
+                    break;
+                case 3:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], HIGH);
+                    digitalWrite(DIMMER_PINS[3], LOW);
+                    break;
+                case 4:
+                    digitalWrite(DIMMER_PINS[0], HIGH);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], HIGH);
+                    digitalWrite(DIMMER_PINS[3], LOW);
+                    break;
+                case 5:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    digitalWrite(DIMMER_PINS[3], HIGH);
+                    break;
+                default:
+                    break;
+    #endif
+            }
+        } else if (DIMMING_LEVELS == 4) {
+            switch (_dim_value) {
+                case 0:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 1:
+                    digitalWrite(DIMMER_PINS[0], HIGH);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 2:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 3:
+                    digitalWrite(DIMMER_PINS[0], HIGH);
+                    digitalWrite(DIMMER_PINS[1], HIGH);
+                    digitalWrite(DIMMER_PINS[2], LOW);
+                    break;
+                case 4:
+                    digitalWrite(DIMMER_PINS[0], LOW);
+                    digitalWrite(DIMMER_PINS[1], LOW);
+                    digitalWrite(DIMMER_PINS[2], HIGH);
+                    break;
+                default:
+                    break;
+            }
+        }
+    #endif
+}
+
+#if DIMMER_PROVIDER == DIMMER_PROVIDER_ESP
+
+void dimmerOffWithoutSavingDimValue(unsigned char id) {
+    for (int i = 0; i < DIMMER_PINS_COUNT; i++) {
+        digitalWrite(DIMMER_PINS[i], LOW);
+    }
+}
+
+#endif
+
+bool relayProviderStatus(unsigned char id) {
+
+    #if RELAY_PROVIDER == RELAY_PROVIDER_ESP
+
+        if (id > _relays.size() || id <= 0)
+            return false;
+        bool status = false;
+        if (_relays[id - 1].take_dimmer_action) {
+            status = _relays[id - 1].status;
+        } else {
+            status = (digitalRead(_relays[id - 1].pin) == HIGH);
+        }
+        return status;
+    #endif
+}
+
+void relayAllMQTT() {
+    mqttSend(MQTT_TOPIC_RELAY_1, relayString().c_str());
+}
+
+void dimmerRetrieve() {
+    #if RELAY_PROVIDER == RELAY_PROVIDER_ESP
+        uint8_t dimmer_status = EEPROMr.read(EEPROM_DIMMER_STATUS);
+        dimmerProviderStatus((int)dimmer_status);
+    #endif
+}
+
+void relayString(JsonObject &root) {
+    JsonArray &relay = root.createNestedArray("relays");
+    for (unsigned char i = 1; i <= relayCount(); i++) {
+        relay.add((int)relayStatus(i));
+    }
+    root["dimmer"] = dimmerProviderStatus();
+    return;
+}
+
+String relayString() {
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    JsonArray &relay = root.createNestedArray("relays");
+    for (unsigned char i = 1; i <= relayCount(); i++) {
+        relay.add((int)relayStatus(i));
+    }
+    #ifdef DIMMER_NUM
+        root["dimmer"] = String(dimmerProviderStatus());
+    #endif
+
+    String output;
+    root.printTo(output);
+    return output;
+}
+
+int dimmerProviderStatus() {
+    if (_dimmer.disabled == true) {
+        return 99;
+    }
+    int value = _dimmer.value;
+    return value;
+}
+
+void dimmerProviderStatus(int value) {
+    dimmerProviderStatus(value, false);
+}
+
 void relaySetup() {
 
     // Ad-hoc relays
@@ -1127,6 +1520,43 @@ void relaySetup() {
     #if RELAY8_PIN != GPIO_NONE
         _relays.push_back((relay_t) { RELAY8_PIN, RELAY8_TYPE, RELAY8_RESET_PIN, RELAY8_DELAY_ON, RELAY8_DELAY_OFF });
     #endif
+     #ifdef DIMMER_NUM
+        _dimmer = {DIMMER_NUM, 0, 0, false, 0};
+        dimmerEnable();
+    #endif
+    #ifdef V_DIMMER
+        pinMode(V_DIMMER, INPUT);
+    #endif
+
+    #if defined(Nexa_1_PLUS_1)
+        _relays[1].take_dimmer_action = true;
+        for (int i = 0; i < DIMMER_PINS_COUNT; i++) {
+            pinMode(DIMMER_PINS[i], OUTPUT);
+        }
+    #endif
+    #ifdef V_DIMMER
+        // int dim_status = analogRead(V_DIMMER);
+        // for (int i = 1; i < 35; i++) {
+        //     dim_status = dim_status + (analogRead(V_DIMMER) - dim_status) / i;
+        // }
+        // dim_status = max(0, dim_status);
+        // _dimmer.vdimval = map(dim_status, 0, 1024, 0, 99);
+        // getSetting("ddd", DIMMER_DEBOUNCE_DELAY);
+        _dimmer.vdimval = getStabilisedDimmerVal(20);
+        // DEBUG_MSG_P(PSTR("Initial vdimval is this %d \n"), _dimmer.vdimval);
+    #endif
+    DEBUG_MSG_P(PSTR("[RELAY] Number of relays: %d\n"), _relays.size());
+
+    byte relayMode = getSetting("relayMode", RELAY_BOOT_MODE).toInt();
+    for (unsigned int i = 0; i < _relays.size(); i++) {
+        #if RELAY_PROVIDER == RELAY_PROVIDER_ESP
+                pinMode(_relays[i].pin, OUTPUT);
+        #endif
+    }
+    if (relayMode == RELAY_MODE_SAME) {
+        relayRetrieve(false);
+        dimmerRetrieve();
+    }
 
     // Dummy relays for AI Light, Magic Home LED Controller, H801, Sonoff Dual and Sonoff RF Bridge
     // No delay_on or off for these devices to easily allow having more than

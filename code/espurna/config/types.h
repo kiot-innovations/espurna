@@ -108,6 +108,8 @@
 #define RELAY_LOCK_ON                1
 #define RELAY_LOCK_DISABLED          2
 
+#define DIMMER_PROVIDER_ESP 2
+#define RELAY_MODE_SAME 2
 //------------------------------------------------------------------------------
 // UDP SYSLOG
 //------------------------------------------------------------------------------
@@ -388,3 +390,7 @@
 #define NEOPIXEL_LED 2
 #define NEOPIXEL_LED_CONFIG_RGB 1
 #define NEOPIXEL_LED_CONFIG_GRB 2
+#define DIMMER_DEBOUNCE_DELAY 130
+#define DIMMER_PROVIDER DIMMER_PROVIDER_ESP
+#define MAX_ACCURATE_USEC_DELAY 16383U
+#define MQTT_REPORT_EVENT_TO_HOME 1

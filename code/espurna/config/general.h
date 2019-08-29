@@ -174,7 +174,7 @@
 #define EEPROM_MESSAGE_ID       7               // Address for the MQTT message id (4 bytes)
 #define EEPROM_ROTATE_DATA      11              // Reserved for the EEPROM_ROTATE library (3 bytes)
 #define EEPROM_DATA_END         14              // End of custom EEPROM data block
-
+#define EEPROM_DIMMER_STATUS 5
 //------------------------------------------------------------------------------
 // THERMOSTAT
 //------------------------------------------------------------------------------
@@ -993,6 +993,7 @@
 #define MQTT_TOPIC_JSON             "data"
 #define MQTT_TOPIC_ACTION           "action"
 #define MQTT_TOPIC_RELAY            "relay"
+#define MQTT_TOPIC_RELAY_1          "switch"
 #define MQTT_TOPIC_LED              "led"
 #define MQTT_TOPIC_BUTTON           "button"
 #define MQTT_TOPIC_IP               "ip"
@@ -1027,6 +1028,8 @@
 #define MQTT_TOPIC_IROUT            "irout"
 #define MQTT_TOPIC_OTA              "ota"
 
+// for dimmer
+#define MQTT_TOPIC_DIMMER           "dimmer"
 // Light module
 #define MQTT_TOPIC_CHANNEL          "channel"
 #define MQTT_TOPIC_COLOR_RGB        "rgb"
@@ -1726,4 +1729,9 @@
 
 #ifndef COMPANY_NAME
 #define COMPANY_NAME "KIOT_PVT_LTD"
+#endif
+
+// Cheating Dimmer - in case of NExa 1 plus 1 switch where we dont have one less pins for the dimmer. We cheat and geive same speed for level 2 and level 3.
+#ifndef CHEAT_DIMMER
+#define CHEAT_DIMMER 0
 #endif

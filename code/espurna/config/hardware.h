@@ -4195,6 +4195,63 @@
     #define MQTT_SETTINGS_ENABLED 1
     #define AWAY_MODE_SUPPORTED 1
 
+// ============================================================
+// Nexa 1 Plus 1
+// ============================================================
+
+#elif defined(Nexa_1_PLUS_1)
+    #define MANUFACTURER COMPANY_NAME
+    #define DEVICE "SW_1_PLUS_1"
+    #define RELAY1_NUM 1
+    #define RELAY1_PIN 15
+
+    #define RELAY2_NUM 2
+    #define DIMMER_NUM 2
+
+    #define RELAY_PROVIDER RELAY_PROVIDER_ESP
+    #define USE_DELAYED_REPORTING 1
+    #define USE_SWITCH_FOR_RESET 1
+    #define BUTTON1_DBLCLICK BUTTON_MODE_RESET
+    #define BUTTON1_LNGLNGCLICK BUTTON_MODE_FACTORY
+    #define BUTTON1_LNGCLICK BUTTON_MODE_NONE
+    #define BUTTON_DBL_CLICK_COUNT 5
+    #define BUTTON_TRIPLE_CLICK_COUNT 7
+    #define BUTTON_ACTION_MULTIPLE 1
+    #define BUTTON_DBLCLICK_DELAY 1200
+    #define BUTTON_DEBOUNCE_DELAY 60
+
+    #define BUTTON1_PIN 14
+    #define BUTTON1_MODE BUTTON_SWITCH
+    #define BUTTON1_RELAY 1
+    #define BUTTON2_PIN 4
+    #define BUTTON2_MODE BUTTON_SWITCH
+    #define BUTTON2_RELAY 2
+    #define DIMMER_PROVIDER DIMMER_PROVIDER_ESP
+    // #define CHEAT_DIMMER    1
+    #define DIMMING_LEVELS 4
+    #define DIMPOS1 5
+    #define DIMPOS2 13
+    #define DIMPOS3 12
+    // #define DIMPOS4 13
+    #define DIMMER_PINS_COUNT 3
+    const int DIMMER_PINS[DIMMER_PINS_COUNT] = {5, 13, 12};
+    #define V_DIMMER A0
+
+    #define MQTT_SETTINGS_ENABLED 1
+    #define LED_PROVIDER NEOPIXEL_LED
+    #define LED_CONFIG NEOPIXEL_LED_CONFIG_GRB
+    #define WIFI_LED_PIN 2
+    // #define BUTTON_DBLCLICK_DELAY   500
+    // Wifi Leds on another board
+    // #define WIFI_LEDS_ON_ANOTHER_BOARDS 0
+    // #define LED_PROVIDER NEOPIXEL_LED
+    // #define LED_CONFIG NEOPIXEL_LED_CONFIG_GRB
+    // #define WIFI_LED_PIN 4
+
+    // Features
+    #define WIFI_SCAN_NETWORKS 1
+    #define WIFI_MAX_NETWORKS 1
+
 #else
 
     #error "UNSUPPORTED HARDWARE!!"
