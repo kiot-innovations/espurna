@@ -185,7 +185,7 @@
 //#define THINGSPEAK_SUPPORT     0
 //#define UART_MQTT_SUPPORT      1
 //#define WEB_SUPPORT            0
-
+#define IS_KIOT_PAYLOAD          1
 //--------------------------------------------------------------------------------
 // Sensors (values below are non-default values)
 //--------------------------------------------------------------------------------

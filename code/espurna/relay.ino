@@ -976,9 +976,15 @@ void relayMQTTCallback(unsigned int type, const char * topic, const char * paylo
         #endif
 
         // Subscribe to own /set topic
+        #ifdef IS_KIOT_PAYLOAD
+        char relay_topic[strlen(MQTT_TOPIC_RELAY) + 2];
+        snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/"), MQTT_TOPIC_RELAY);
+        mqttSubscribe(relay_topic);
+        #else
         char relay_topic[strlen(MQTT_TOPIC_RELAY) + 3];
         snprintf_P(relay_topic, sizeof(relay_topic), PSTR("%s/+"), MQTT_TOPIC_RELAY);
         mqttSubscribe(relay_topic);
+        #endif
 
         // Subscribe to pulse topic
         char pulse_topic[strlen(MQTT_TOPIC_PULSE) + 3];
@@ -1029,20 +1035,44 @@ void relayMQTTCallback(unsigned int type, const char * topic, const char * paylo
         // magnitude is relay/#
         if (t.startsWith(MQTT_TOPIC_RELAY)) {
 
-            // Get relay ID
-            unsigned int id = t.substring(strlen(MQTT_TOPIC_RELAY)+1).toInt();
-            if (id >= relayCount()) {
-                DEBUG_MSG_P(PSTR("[RELAY] Wrong relayID (%d)\n"), id);
+            #ifdef IS_KIOT_PAYLOAD
+
+                StaticJsonBuffer<500> jsonBuffer;
+                JsonObject &root = jsonBuffer.parseObject(reinterpret_cast<const char *>(payload));
+                if (!root.success()) {
+                    DEBUG_MSG_P(PSTR("[ERROR] parseObject() failed for MQTT NOw"));
+                    return;
+                }
+
+                int action = root["action"];
+                // Get relay ID
+                unsigned int id = action / 10;
+                if (id >= relayCount()) {
+                    DEBUG_MSG_P(PSTR("[RELAY] Wrong relayID (%d)\n"), id);
+                    return;
+                }
+
+                // Get value
+                unsigned char value = (unsigned char)(action % 10);
+                relayStatusWrap(id, value, false);
+
                 return;
-            }
+            #else
+                // Get relay ID
+                unsigned int id = t.substring(strlen(MQTT_TOPIC_RELAY)+1).toInt();
+                if (id >= relayCount()) {
+                    DEBUG_MSG_P(PSTR("[RELAY] Wrong relayID (%d)\n"), id);
+                    return;
+                }
 
-            // Get value
-            unsigned char value = relayParsePayload(payload);
-            if (value == 0xFF) return;
+                // Get value
+                unsigned char value = relayParsePayload(payload);
+                if (value == 0xFF) return;
 
-            relayStatusWrap(id, value, false);
+                relayStatusWrap(id, value, false);
 
-            return;
+                return;
+            #endif
         }
 
 
